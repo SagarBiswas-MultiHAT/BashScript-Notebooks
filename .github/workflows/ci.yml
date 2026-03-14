@@ -15,7 +15,7 @@ jobs:
       - name: Run minimal checks
         shell: bash
         run: |
-          echo "Running minimal CI for BashScript-Notbooks"
+          echo "Running minimal CI for BashScript-Notebooks"
           echo "Repository contents:"
           ls -la
 

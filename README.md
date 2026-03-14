@@ -2,15 +2,15 @@
 
 <div align="right">
 
-[![CI](https://github.com/SagarBiswas-MultiHAT/BashScript-Notbooks/actions/workflows/ci.yml/badge.svg)](https://github.com/SagarBiswas-MultiHAT/BashScript-Notbooks/actions)
+[![CI](https://github.com/SagarBiswas-MultiHAT/BashScript-Notebooks/actions/workflows/ci.yml/badge.svg)](https://github.com/SagarBiswas-MultiHAT/BashScript-Notebooks/actions)
 &nbsp;
-[![Release](https://img.shields.io/github/v/release/SagarBiswas-MultiHAT/BashScript-Notbooks)](https://github.com/SagarBiswas-MultiHAT/BashScript-Notbooks/releases)
+[![Release](https://img.shields.io/github/v/release/SagarBiswas-MultiHAT/BashScript-Notebooks)](https://github.com/SagarBiswas-MultiHAT/BashScript-Notebooks/releases)
 &nbsp;
-[![License](https://img.shields.io/github/license/SagarBiswas-MultiHAT/BashScript-Notbooks)](LICENSE)
+[![License](https://img.shields.io/github/license/SagarBiswas-MultiHAT/BashScript-Notebooks)](LICENSE)
 &nbsp;
-[![last commit](https://img.shields.io/github/last-commit/SagarBiswas-MultiHAT/BashScript-Notbooks)](https://github.com/SagarBiswas-MultiHAT/BashScript-Notbooks/commits/main)
+[![last commit](https://img.shields.io/github/last-commit/SagarBiswas-MultiHAT/BashScript-Notebooks)](https://github.com/SagarBiswas-MultiHAT/BashScript-Notebooks/commits/main)
 &nbsp;
-[![issues](https://img.shields.io/github/issues/SagarBiswas-MultiHAT/BashScript-Notbooks)](https://github.com/SagarBiswas-MultiHAT/BashScript-Notbooks/issues)
+[![issues](https://img.shields.io/github/issues/SagarBiswas-MultiHAT/BashScript-Notebooks)](https://github.com/SagarBiswas-MultiHAT/BashScript-Notebooks/issues)
 
 </div>
 
