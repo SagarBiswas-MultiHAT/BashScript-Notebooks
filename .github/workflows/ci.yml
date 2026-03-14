@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run minimal checks
+        shell: bash
+        run: |
+          echo "Running minimal CI for BashScript-Notbooks"
+          echo "Repository contents:"
+          ls -la
+
+          # enable recursive globbing and treat no matches as empty
+          shopt -s globstar nullglob
+          files=(**/*.sh)
+          if [ ${#files[@]} -gt 0 ]; then
+            echo "Checking ${#files[@]} shell scripts for syntax errors..."
+            for f in "${files[@]}"; do
+              echo " - $f"
+              bash -n "$f"
+            done
+          else
+            echo "No shell scripts found to check."
+          fi
+
+          echo "Minimal CI finished successfully."
