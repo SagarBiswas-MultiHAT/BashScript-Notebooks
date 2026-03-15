@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Bash Script Notebooks - Sagar Biswas</title>
+  <id>https://sagarbiswas-multihat.github.io/BashScript-Notebooks/feed.xml</id>
+  <updated>2026-03-15T00:00:00Z</updated>
+  <link href="https://sagarbiswas-multihat.github.io/BashScript-Notebooks/feed.xml" rel="self" />
+  <link href="https://sagarbiswas-multihat.github.io/BashScript-Notebooks/" />
+  <author>
+    <name>Sagar Biswas</name>
+  </author>
+  <entry>
+    <title>Bash Scripting Tutorial and Shell Script Examples</title>
+    <id>https://sagarbiswas-multihat.github.io/BashScript-Notebooks/</id>
+    <link href="https://sagarbiswas-multihat.github.io/BashScript-Notebooks/" />
+    <updated>2026-03-15T00:00:00Z</updated>
+    <summary>Bash scripting tutorial notebook with practical shell script examples and Linux command workflows.</summary>
+  </entry>
+</feed>

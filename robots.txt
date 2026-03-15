@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://sagarbiswas-multihat.github.io/BashScript-Notebooks/sitemap.xml
