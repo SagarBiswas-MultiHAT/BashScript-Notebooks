@@ -2,16 +2,49 @@ name: SEO Checks
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - main
   pull_request:
-    branches: ["main"]
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seo-check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   seo-lint:
+    name: Local SEO lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
-      - name: Run SEO lint
-        run: ./scripts/seo_lint.sh
+      - name: Run repository SEO lint
+        env:
+          SEO_LINT_CHECK_HTTP: "0"
+        run: bash ./scripts/seo_lint.sh .
+
+  seo-live:
+    name: Live robots and sitemap check
+    if: github.event_name == 'workflow_dispatch'
+    needs: seo-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run SEO lint with live HTTP checks
+        env:
+          SEO_LINT_CHECK_HTTP: "1"
+        run: bash ./scripts/seo_lint.sh .
