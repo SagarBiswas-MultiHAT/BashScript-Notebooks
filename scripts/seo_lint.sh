@@ -6,6 +6,7 @@ cd "$ROOT_DIR"
 
 failures=0
 warnings=0
+site_base_url=""
 
 err() {
   printf '[SEO FAIL] %s\n' "$1"
@@ -51,6 +52,19 @@ extract_link_href() {
   ' "$file"
 }
 
+extract_link_href_with_type() {
+  local file="$1"
+  local rel="$2"
+  local type="$3"
+  SEO_LINK_REL="$rel" SEO_LINK_TYPE="$type" perl -0777 -ne '
+    my $rel = quotemeta $ENV{SEO_LINK_REL};
+    my $type = quotemeta $ENV{SEO_LINK_TYPE};
+    if (/<link\b(?=[^>]*\brel=["\x27]$rel["\x27])(?=[^>]*\btype=["\x27]$type["\x27])(?=[^>]*\bhref=["\x27]([^"\x27]+)["\x27])[^>]*>/is) {
+      print $1;
+    }
+  ' "$file"
+}
+
 extract_title() {
   local file="$1"
   perl -0777 -ne '
@@ -76,6 +90,16 @@ extract_sitemap_urls() {
 extract_robots_sitemap_urls() {
   local file="$1"
   sed -nE 's/^[[:space:]]*[Ss]itemap:[[:space:]]*(https:\/\/[^[:space:]]+)[[:space:]]*$/\1/p' "$file"
+}
+
+extract_feed_id() {
+  local file="$1"
+  perl -0777 -ne 'if (/<feed\b.*?<id>\s*([^<]+)\s*<\/id>/is) { print $1; }' "$file"
+}
+
+extract_feed_self_href() {
+  local file="$1"
+  perl -0777 -ne 'if (/<link\b(?=[^>]*\brel=["\x27]self["\x27])(?=[^>]*\bhref=["\x27]([^"\x27]+)["\x27])[^>]*>/is) { print $1; }' "$file"
 }
 
 strip_wrapping_quotes() {
@@ -115,6 +139,58 @@ is_repository_doc_markdown() {
   esac
 
   return 1
+}
+
+ensure_trailing_slash() {
+  local url="$1"
+  [[ -n "$url" ]] || {
+    printf '%s' "$url"
+    return
+  }
+
+  [[ "$url" == */ ]] || url="${url}/"
+  printf '%s' "$url"
+}
+
+derive_site_base_url() {
+  local configured_url="${SEO_LINT_SITE_BASE_URL:-}"
+  local canonical_url
+  local sitemap_urls=()
+
+  if [[ -n "$configured_url" ]]; then
+    site_base_url="$(ensure_trailing_slash "$configured_url")"
+  elif [[ -f robots.txt ]]; then
+    mapfile -t sitemap_urls < <(extract_robots_sitemap_urls robots.txt)
+    if [[ "${#sitemap_urls[@]}" -gt 0 ]]; then
+      site_base_url="${sitemap_urls[0]%/*}/"
+    fi
+  fi
+
+  if [[ -z "$site_base_url" && -f index.html ]]; then
+    canonical_url="$(extract_link_href index.html canonical)"
+    if [[ -n "$canonical_url" ]]; then
+      if [[ "$canonical_url" == */ ]]; then
+        site_base_url="$canonical_url"
+      else
+        site_base_url="${canonical_url%/*}/"
+      fi
+    fi
+  fi
+
+  if [[ -z "$site_base_url" ]]; then
+    err "Unable to determine site base URL from SEO_LINT_SITE_BASE_URL, robots.txt, or index.html"
+    return
+  fi
+
+  [[ "$site_base_url" =~ ^https:// ]] || err "Site base URL must start with https:// ($site_base_url)"
+}
+
+validate_url_within_site_base() {
+  local label="$1"
+  local url="$2"
+
+  [[ -n "$site_base_url" ]] || return
+  [[ "$url" == "$site_base_url"* ]] || err "$label must stay within site base URL ($site_base_url): $url"
 }
 
 should_check_http() {
@@ -203,6 +279,7 @@ validate_robots_txt() {
 
   for sitemap_url in "${sitemap_urls[@]}"; do
     [[ "$sitemap_url" =~ ^https:// ]] || err "robots.txt: Sitemap URL must start with https:// ($sitemap_url)"
+    validate_url_within_site_base "robots.txt sitemap URL" "$sitemap_url"
   done
 
   if ! should_check_http; then
@@ -235,6 +312,7 @@ validate_sitemap_xml() {
 
   for url in "${urls[@]}"; do
     [[ "$url" =~ ^https:// ]] || err "sitemap.xml: URL must start with https:// ($url)"
+    validate_url_within_site_base "sitemap.xml URL" "$url"
   done
 
   if ! should_check_http; then
@@ -248,6 +326,63 @@ validate_sitemap_xml() {
   for url in "${urls[@]}"; do
     http_200 "$url" || err "sitemap.xml URL failed after retries: $url"
   done
+}
+
+validate_feed_xml() {
+  local feed_id
+  local feed_self_url
+  local root_feed_link
+  local expected_feed_url
+
+  [[ -f feed.xml ]] || {
+    err "Missing feed.xml at repo root"
+    return
+  }
+
+  feed_id="$(extract_feed_id feed.xml)"
+  feed_self_url="$(extract_feed_self_href feed.xml)"
+  expected_feed_url="${site_base_url}feed.xml"
+
+  if [[ -z "$feed_id" ]]; then
+    err "feed.xml: Missing <id>"
+  elif [[ ! "$feed_id" =~ ^https:// ]]; then
+    err "feed.xml: <id> must start with https://"
+  else
+    validate_url_within_site_base "feed.xml <id>" "$feed_id"
+  fi
+
+  if [[ -z "$feed_self_url" ]]; then
+    err "feed.xml: Missing self link"
+  elif [[ ! "$feed_self_url" =~ ^https:// ]]; then
+    err "feed.xml: Self link must start with https://"
+  else
+    validate_url_within_site_base "feed.xml self link" "$feed_self_url"
+    [[ "$feed_self_url" == "$expected_feed_url" ]] || err "feed.xml: Self link must equal $expected_feed_url"
+  fi
+
+  if [[ -n "$feed_id" && -n "$feed_self_url" && "$feed_id" != "$feed_self_url" ]]; then
+    err "feed.xml: <id> must match the self link URL"
+  fi
+
+  grep -q '<entry>' feed.xml || err "feed.xml: Missing <entry>"
+
+  if [[ -f index.html ]]; then
+    root_feed_link="$(extract_link_href_with_type index.html alternate 'application/atom+xml')"
+    if [[ -z "$root_feed_link" ]]; then
+      err "index.html: Missing Atom feed alternate link"
+    elif [[ -n "$feed_self_url" && "$root_feed_link" != "$feed_self_url" ]]; then
+      err "index.html: Atom feed alternate link must point to $feed_self_url"
+    fi
+  fi
+
+  if ! should_check_http; then
+    info "Skipping live feed URL checks outside CI (set SEO_LINT_CHECK_HTTP=1 to enable)"
+    return
+  fi
+
+  require_tool curl
+  info "Checking feed URL"
+  http_200 "$expected_feed_url" || err "feed.xml URL failed after retries: $expected_feed_url"
 }
 
 scan_html_files() {
@@ -279,6 +414,8 @@ scan_html_files() {
       err "$file: Missing canonical link"
     elif [[ ! "$canonical" =~ ^https:// ]]; then
       err "$file: Canonical must start with https://"
+    else
+      validate_url_within_site_base "$file canonical" "$canonical"
     fi
 
     robots="$(extract_meta_content "$file" robots)"
@@ -330,6 +467,8 @@ scan_markdown_files() {
     canonical_url="$(strip_wrapping_quotes "$canonical_url")"
     if [[ -n "$canonical_url" && ! "$canonical_url" =~ ^https:// ]]; then
       err "$md: canonical_url must start with https://"
+    elif [[ -n "$canonical_url" ]]; then
+      validate_url_within_site_base "$md canonical_url" "$canonical_url"
     fi
   done < <(find_markdown_files)
 }
@@ -339,8 +478,10 @@ require_tool grep
 require_tool perl
 require_tool sed
 
+derive_site_base_url
 validate_robots_txt
 validate_sitemap_xml
+validate_feed_xml
 scan_html_files
 scan_markdown_files
 
